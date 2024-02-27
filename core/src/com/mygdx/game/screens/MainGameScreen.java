@@ -4,16 +4,32 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.mygdx.game.SpaceGame;
 
 public class MainGameScreen implements Screen {
-
+    // spaceship 17x32 aspectratio
     public SpaceGame game;
 
-    Texture img;
+    public static final int SHIP_WIDTH_PIXELS = 17;
+    public static final int SHIP_HEIGHT_PIXELS = 32;
 
-    float x, y, width, height;
+    public static final int SHIP_WIDTH = SHIP_WIDTH_PIXELS * 3;
+    public static final int SHIP_HEIGHT = SHIP_HEIGHT_PIXELS * 3;
+
+    public static final float SHIP_ANIMATION_SPEED = 0.5f;
+
+    public static final float ROLL_TIMER_SWITCH_TIME = 0.25f;
+
+    Animation<TextureRegion>[] rolls;
+
+    float x, y;
+    int roll;
+    float rollTimer;
+    float stateTime;
+
     final float ACCN = 1000; // Acceleration in pixels per second squared
     final float MAX_SPEED = 500; // Maximum speed in pixels per second
     float velocityX, velocityY;
@@ -21,18 +37,26 @@ public class MainGameScreen implements Screen {
 
     public MainGameScreen(SpaceGame game) {
         this.game = game;
+
+        y = 15;
+        x = (SpaceGame.WIDTH - SHIP_WIDTH) / 2;
+
+        roll = 2;
+        rolls = new Animation[5];
+        rollTimer = 0;
+        TextureRegion[][] rollSpriteSheet = TextureRegion.split(new Texture("ship.png"), SHIP_WIDTH_PIXELS,
+                SHIP_HEIGHT_PIXELS);
+
+        rolls[0] = new Animation(SHIP_ANIMATION_SPEED, rollSpriteSheet[2]);// left roll
+        rolls[1] = new Animation(SHIP_ANIMATION_SPEED, rollSpriteSheet[1]);// left low roll
+        rolls[2] = new Animation(SHIP_ANIMATION_SPEED, rollSpriteSheet[0]);// normal
+        rolls[3] = new Animation(SHIP_ANIMATION_SPEED, rollSpriteSheet[3]);// right low roll
+        rolls[4] = new Animation(SHIP_ANIMATION_SPEED, rollSpriteSheet[4]);// right roll
     }
+
     @Override
     public void show() {
-
-        img = new Texture("spaceship.png");
-
-        // Initialize position and dimensions
-        float scale = 0.1f;
-        width = img.getWidth() * scale;
-        height = img.getHeight() * scale;
-        x = (Gdx.graphics.getWidth() - width) / 2;
-        y = (Gdx.graphics.getHeight() - height) / 2;
+        // img = new Texture("spaceship.png");
     }
 
     @Override
@@ -43,36 +67,78 @@ public class MainGameScreen implements Screen {
 
         float dt = Gdx.graphics.getDeltaTime(); // Get delta time
 
-        // Apply acceleration
+        // Apply acceleration and rolling Animation
+        // ___________________________________________________________________________
         velocityX += Math.min(ACCN * dt, MAX_SPEED);
         velocityY += Math.min(ACCN * dt, MAX_SPEED);
 
-        if (Gdx.input.isKeyPressed(Keys.UP)) {
-            y += velocityY * dt;
-            currentKey = Keys.UP;
-        } else if (Gdx.input.isKeyPressed(Keys.DOWN)) {
-            y -= velocityY * dt;
-            currentKey = Keys.DOWN;
-        } else if (Gdx.input.isKeyPressed(Keys.LEFT)) {
+        // Handling left roll and return
+        // ___________________________________________________________________________
+        if (Gdx.input.isKeyPressed(Keys.LEFT)) {
             x -= velocityX * dt;
             currentKey = Keys.LEFT;
-        } else if (Gdx.input.isKeyPressed(Keys.RIGHT)) {
+            if (x < 0)
+                x = 0;// left bounds
+            // update roll if button just clicked
+            if (Gdx.input.isKeyJustPressed(Keys.LEFT) && !Gdx.input.isKeyJustPressed(Keys.RIGHT) && roll > 0) {
+                rollTimer = 0;
+                roll--;
+            }
+
+            rollTimer -= dt;// update roll;
+            if (Math.abs(rollTimer) > ROLL_TIMER_SWITCH_TIME && roll > 0) {
+                rollTimer = 0;
+                roll--;
+            }
+        } else {
+            if (roll < 2) {
+                // Update roll to make it go back to center
+                rollTimer += Gdx.graphics.getDeltaTime();
+                if (Math.abs(rollTimer) > ROLL_TIMER_SWITCH_TIME && roll < 4) {
+                    rollTimer = 0;
+                    roll++;
+                }
+            }
+        }
+        // ___________________________________________________________________________
+
+        // Handling right roll and return
+        // ___________________________________________________________________________
+        if (Gdx.input.isKeyPressed(Keys.RIGHT)) {
             x += velocityX * dt;
             currentKey = Keys.RIGHT;
+            if (x + SHIP_WIDTH > SpaceGame.WIDTH)
+                x = SpaceGame.WIDTH - SHIP_WIDTH;// right bounds
+
+            rollTimer += dt;// update roll;
+            if (Math.abs(rollTimer) > ROLL_TIMER_SWITCH_TIME && roll < 4) {
+                rollTimer = 0;
+                roll++;
+            }
+        } else {
+            if (roll > 2) {
+                // Update roll
+                rollTimer -= Gdx.graphics.getDeltaTime();
+                if (Math.abs(rollTimer) > ROLL_TIMER_SWITCH_TIME && roll > 0) {
+                    rollTimer = 0;
+                    roll--;
+                }
+            }
         }
+        // ___________________________________________________________________________
 
         if (currentKey != prevKey) {
             velocityX = velocityY = 0;
         }
 
         prevKey = currentKey;
+        // ___________________________________________________________________________
 
-        // Clamp position within the screen bounds
-        x = Math.max(0, Math.min(x, Gdx.graphics.getWidth() - width));
-        y = Math.max(0, Math.min(y, Gdx.graphics.getHeight() - height));
-
+        stateTime += delta;
         game.batch.begin();
-        game.batch.draw(img, x, y, width, height);
+
+        game.batch.draw(rolls[roll].getKeyFrame(stateTime, true), x, y, SHIP_WIDTH, SHIP_HEIGHT);
+
         game.batch.end();
     }
 

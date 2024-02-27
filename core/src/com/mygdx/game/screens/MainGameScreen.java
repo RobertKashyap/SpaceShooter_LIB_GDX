@@ -1,5 +1,7 @@
 package com.mygdx.game.screens;
 
+import java.util.ArrayList;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.Screen;
@@ -8,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.mygdx.game.SpaceGame;
+import com.mygdx.game.entites.Bullet;
 
 public class MainGameScreen implements Screen {
     // spaceship 17x32 aspectratio
@@ -35,11 +38,14 @@ public class MainGameScreen implements Screen {
     float velocityX, velocityY;
     int prevKey;
 
+    ArrayList<Bullet> bullets;
+
     public MainGameScreen(SpaceGame game) {
         this.game = game;
 
         y = 15;
         x = (SpaceGame.WIDTH - SHIP_WIDTH) / 2;
+        bullets = new ArrayList<>();
 
         roll = 2;
         rolls = new Animation[5];
@@ -63,9 +69,25 @@ public class MainGameScreen implements Screen {
     public void render(float delta) {
         ScreenUtils.clear(0, 0, 0, 1);
 
-        int currentKey = Keys.SPACE;
+        int currentKey = Keys.CONTROL_LEFT;
 
         float dt = Gdx.graphics.getDeltaTime(); // Get delta time
+
+        // Bullet Shoot Code
+        // ___________________________________________________________________________
+        if (Gdx.input.isKeyJustPressed(Keys.SPACE)) {
+            bullets.add(new Bullet(x + 4, y));
+            bullets.add(new Bullet(x + SHIP_WIDTH - 4, y));
+        }
+        ArrayList<Bullet> bulletsToRemove = new ArrayList<>();
+        for (Bullet bullet : bullets) {
+            bullet.update(dt);
+            if (bullet.remove) {
+                bulletsToRemove.add(bullet);
+            }
+        }
+        bullets.removeAll(bulletsToRemove);
+        // ___________________________________________________________________________
 
         // Apply acceleration and rolling Animation
         // ___________________________________________________________________________
@@ -132,11 +154,15 @@ public class MainGameScreen implements Screen {
         }
 
         prevKey = currentKey;
+        //Movement ends here
         // ___________________________________________________________________________
 
         stateTime += delta;
         game.batch.begin();
 
+        for (Bullet bullet : bullets) {
+            bullet.render(game.batch);
+        }
         game.batch.draw(rolls[roll].getKeyFrame(stateTime, true), x, y, SHIP_WIDTH, SHIP_HEIGHT);
 
         game.batch.end();

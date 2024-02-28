@@ -109,7 +109,7 @@ public class MainGameScreen implements Screen {
 
             rollTimer -= dt;// update roll;
             if (Math.abs(rollTimer) > ROLL_TIMER_SWITCH_TIME && roll > 0) {
-                rollTimer = 0;
+                rollTimer -= ROLL_TIMER_SWITCH_TIME;
                 roll--;
             }
         } else {
@@ -117,7 +117,7 @@ public class MainGameScreen implements Screen {
                 // Update roll to make it go back to center
                 rollTimer += Gdx.graphics.getDeltaTime();
                 if (Math.abs(rollTimer) > ROLL_TIMER_SWITCH_TIME && roll < 4) {
-                    rollTimer = 0;
+                    rollTimer -= ROLL_TIMER_SWITCH_TIME;
                     roll++;
                 }
             }
@@ -131,10 +131,14 @@ public class MainGameScreen implements Screen {
             currentKey = Keys.RIGHT;
             if (x + SHIP_WIDTH > SpaceGame.WIDTH)
                 x = SpaceGame.WIDTH - SHIP_WIDTH;// right bounds
-
+            // update roll if button just clicked
+            if (Gdx.input.isKeyJustPressed(Keys.RIGHT) && !Gdx.input.isKeyJustPressed(Keys.LEFT) && roll < 4) {
+                rollTimer = 0;
+                roll++;
+            }
             rollTimer += dt;// update roll;
             if (Math.abs(rollTimer) > ROLL_TIMER_SWITCH_TIME && roll < 4) {
-                rollTimer = 0;
+                rollTimer -= ROLL_TIMER_SWITCH_TIME;
                 roll++;
             }
         } else {
@@ -142,7 +146,7 @@ public class MainGameScreen implements Screen {
                 // Update roll
                 rollTimer -= Gdx.graphics.getDeltaTime();
                 if (Math.abs(rollTimer) > ROLL_TIMER_SWITCH_TIME && roll > 0) {
-                    rollTimer = 0;
+                    rollTimer -= ROLL_TIMER_SWITCH_TIME;
                     roll--;
                 }
             }
@@ -154,7 +158,7 @@ public class MainGameScreen implements Screen {
         }
 
         prevKey = currentKey;
-        //Movement ends here
+        // Movement ends here
         // ___________________________________________________________________________
 
         stateTime += delta;

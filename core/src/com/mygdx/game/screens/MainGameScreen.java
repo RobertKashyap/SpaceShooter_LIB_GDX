@@ -25,6 +25,7 @@ public class MainGameScreen implements Screen {
     public static final float SHIP_ANIMATION_SPEED = 0.5f;
 
     public static final float ROLL_TIMER_SWITCH_TIME = 0.25f;
+    public static final float SHOOT_WAIT_TIME = 0.3f;
 
     Animation<TextureRegion>[] rolls;
 
@@ -32,6 +33,7 @@ public class MainGameScreen implements Screen {
     int roll;
     float rollTimer;
     float stateTime;
+    float shootTimer;
 
     final float ACCN = 1000; // Acceleration in pixels per second squared
     final float MAX_SPEED = 500; // Maximum speed in pixels per second
@@ -50,6 +52,7 @@ public class MainGameScreen implements Screen {
         roll = 2;
         rolls = new Animation[5];
         rollTimer = 0;
+        shootTimer = 0;
         TextureRegion[][] rollSpriteSheet = TextureRegion.split(new Texture("ship.png"), SHIP_WIDTH_PIXELS,
                 SHIP_HEIGHT_PIXELS);
 
@@ -75,9 +78,20 @@ public class MainGameScreen implements Screen {
 
         // Bullet Shoot Code
         // ___________________________________________________________________________
-        if (Gdx.input.isKeyJustPressed(Keys.SPACE)) {
-            bullets.add(new Bullet(x + 4, y));
-            bullets.add(new Bullet(x + SHIP_WIDTH - 4, y));
+        shootTimer += dt;
+        if (Gdx.input.isKeyPressed(Keys.SPACE) && shootTimer >= SHOOT_WAIT_TIME) {
+            shootTimer = 0;
+
+            int offset = 4;//higher offset => closer bullets
+            if (roll == 1 || roll ==3) {
+                offset = 8;//slight tilt close offset
+            }
+            if (roll ==0 || roll==4) {
+                offset = 16;//full tilt very close offset
+            }
+
+            bullets.add(new Bullet(x + offset, y));
+            bullets.add(new Bullet(x + SHIP_WIDTH - offset, y));
         }
         ArrayList<Bullet> bulletsToRemove = new ArrayList<>();
         for (Bullet bullet : bullets) {

@@ -8,6 +8,8 @@ import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.mygdx.game.SpaceGame;
@@ -52,6 +54,9 @@ public class MainGameScreen implements Screen {
     ArrayList<Bullet> bullets;
     ArrayList<Asteroid> asteroids;
 
+    BitmapFont scoreFont;
+    int score;
+
     public MainGameScreen(SpaceGame game) {
         this.game = game;
 
@@ -59,7 +64,8 @@ public class MainGameScreen implements Screen {
         x = (SpaceGame.WIDTH - SHIP_WIDTH) / 2;
         bullets = new ArrayList<>();
         asteroids = new ArrayList<>();
-
+        scoreFont = new BitmapFont(Gdx.files.internal("fonts/score.fnt"));
+        score = 0;
         random = new Random();
         asteroidSpawnTimer = random.nextFloat() * (MAX_ASTEROID_SPAWN_TIME - MIN_ASTEROID_SPAWN_TIME)
                 + MIN_ASTEROID_SPAWN_TIME;
@@ -204,7 +210,6 @@ public class MainGameScreen implements Screen {
         }
 
         prevKey = currentKey;
-        // Movement ends here
         // ___________________________________________________________________________
 
         // Collision detection
@@ -215,6 +220,7 @@ public class MainGameScreen implements Screen {
                 if (bullet.getCollisionRect().collidesWith(asteroid.getCollisionRect())) {
                     bulletsToRemove.add(bullet);
                     asteroidsToRemove.add(asteroid);
+                    score += 100;
                 }
             }
         }
@@ -226,6 +232,10 @@ public class MainGameScreen implements Screen {
 
         ScreenUtils.clear(0, 0, 0, 1);
         game.batch.begin();
+
+        GlyphLayout scoreLayout = new GlyphLayout(scoreFont, "" + score);
+        scoreFont.draw(game.batch, scoreLayout, (SpaceGame.WIDTH - scoreLayout.width) / 2,
+                SpaceGame.HEIGHT - scoreLayout.height - 10);
 
         for (Bullet bullet : bullets) {
             bullet.render(game.batch);

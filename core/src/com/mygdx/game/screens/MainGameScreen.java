@@ -1,6 +1,7 @@
 package com.mygdx.game.screens;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
@@ -10,6 +11,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.mygdx.game.SpaceGame;
+import com.mygdx.game.entites.Asteroid;
 import com.mygdx.game.entites.Bullet;
 
 public class MainGameScreen implements Screen {
@@ -25,7 +27,11 @@ public class MainGameScreen implements Screen {
     public static final float SHIP_ANIMATION_SPEED = 0.5f;
 
     public static final float ROLL_TIMER_SWITCH_TIME = 0.25f;
+
     public static final float SHOOT_WAIT_TIME = 0.3f;
+
+    public static final float MIN_ASTEROID_SPAWN_TIME = 0.3f;
+    public static final float MAX_ASTEROID_SPAWN_TIME = 0.6f;
 
     Animation<TextureRegion>[] rolls;
 
@@ -34,6 +40,9 @@ public class MainGameScreen implements Screen {
     float rollTimer;
     float stateTime;
     float shootTimer;
+    float asteroidSpawnTimer;
+
+    Random random;
 
     final float ACCN = 1000; // Acceleration in pixels per second squared
     final float MAX_SPEED = 500; // Maximum speed in pixels per second
@@ -41,6 +50,7 @@ public class MainGameScreen implements Screen {
     int prevKey;
 
     ArrayList<Bullet> bullets;
+    ArrayList<Asteroid> asteroids;
 
     public MainGameScreen(SpaceGame game) {
         this.game = game;
@@ -48,6 +58,11 @@ public class MainGameScreen implements Screen {
         y = 15;
         x = (SpaceGame.WIDTH - SHIP_WIDTH) / 2;
         bullets = new ArrayList<>();
+        asteroids = new ArrayList<>();
+
+        random = new Random();
+        asteroidSpawnTimer = random.nextFloat() * (MAX_ASTEROID_SPAWN_TIME - MIN_ASTEROID_SPAWN_TIME)
+                + MIN_ASTEROID_SPAWN_TIME;
 
         roll = 2;
         rolls = new Animation[5];
@@ -70,7 +85,6 @@ public class MainGameScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        ScreenUtils.clear(0, 0, 0, 1);
 
         int currentKey = Keys.CONTROL_LEFT;
 
@@ -82,16 +96,16 @@ public class MainGameScreen implements Screen {
         if (Gdx.input.isKeyPressed(Keys.SPACE) && shootTimer >= SHOOT_WAIT_TIME) {
             shootTimer = 0;
 
-            int offset = 4;//higher offset => closer bullets
-            if (roll == 1 || roll ==3) {
-                offset = 8;//slight tilt close offset
+            int offset = 4;// higher offset => closer bullets
+            if (roll == 1 || roll == 3) {
+                offset = 8;// slight tilt close offset
             }
-            if (roll ==0 || roll==4) {
-                offset = 16;//full tilt very close offset
+            if (roll == 0 || roll == 4) {
+                offset = 16;// full tilt very close offset
             }
 
-            bullets.add(new Bullet(x + offset, y));
-            bullets.add(new Bullet(x + SHIP_WIDTH - offset, y));
+            bullets.add(new Bullet(x + offset));
+            bullets.add(new Bullet(x + SHIP_WIDTH - offset));
         }
         ArrayList<Bullet> bulletsToRemove = new ArrayList<>();
         for (Bullet bullet : bullets) {
@@ -100,7 +114,25 @@ public class MainGameScreen implements Screen {
                 bulletsToRemove.add(bullet);
             }
         }
-        bullets.removeAll(bulletsToRemove);
+        // ___________________________________________________________________________
+
+        // Asteroid spawn code
+        // ___________________________________________________________________________
+        asteroidSpawnTimer -= dt;
+        if (asteroidSpawnTimer <= 0) {
+            asteroidSpawnTimer = random.nextFloat() * (MAX_ASTEROID_SPAWN_TIME - MIN_ASTEROID_SPAWN_TIME)
+                    + MIN_ASTEROID_SPAWN_TIME;
+            asteroids.add(new Asteroid((random.nextInt(SpaceGame.WIDTH) - Asteroid.WIDTH)));
+        }
+
+        ArrayList<Asteroid> asteroidsToRemove = new ArrayList<>();
+        for (Asteroid asteroid : asteroids) {
+            asteroid.update(dt);
+            if (asteroid.remove) {
+                asteroidsToRemove.add(asteroid);
+            }
+        }
+
         // ___________________________________________________________________________
 
         // Apply acceleration and rolling Animation
@@ -175,12 +207,34 @@ public class MainGameScreen implements Screen {
         // Movement ends here
         // ___________________________________________________________________________
 
+        // Collision detection
+        // after all updation of motion
+        // ___________________________________________________________________________
+        for (Bullet bullet : bullets) {
+            for (Asteroid asteroid : asteroids) {
+                if (bullet.getCollisionRect().collidesWith(asteroid.getCollisionRect())) {
+                    bulletsToRemove.add(bullet);
+                    asteroidsToRemove.add(asteroid);
+                }
+            }
+        }
+        // ___________________________________________________________________________
+        asteroids.removeAll(asteroidsToRemove);
+        bullets.removeAll(bulletsToRemove);
+
         stateTime += delta;
+
+        ScreenUtils.clear(0, 0, 0, 1);
         game.batch.begin();
 
         for (Bullet bullet : bullets) {
             bullet.render(game.batch);
         }
+
+        for (Asteroid asteroid : asteroids) {
+            asteroid.render(game.batch);
+        }
+
         game.batch.draw(rolls[roll].getKeyFrame(stateTime, true), x, y, SHIP_WIDTH, SHIP_HEIGHT);
 
         game.batch.end();
